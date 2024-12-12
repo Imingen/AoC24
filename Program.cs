@@ -21,5 +21,5 @@ else if (day == 3)
 else if (day == 11)
 {
     solver = new Eleven();
-    solver.solve();
+    solver.solveSecondPart();
 }
