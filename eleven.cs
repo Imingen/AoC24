@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text;
 
@@ -59,48 +60,47 @@ namespace AoC24
             int stop = 75;
             var mainStones = "112 1110 163902 0 7656027 83039 9 74";
 
-            MemoryStream memoryStream = new MemoryStream();
-            StreamWriter streamWriter = new StreamWriter(memoryStream);
-            streamWriter.Write(mainStones);
-            streamWriter.Flush();
-            memoryStream.Position = 0;
+
+            string tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, mainStones);
+
 
             while (start < stop)
             {
-                memoryStream.Position = 0;
-                StreamReader streamReader = new StreamReader(memoryStream);
-                MemoryStream newMemoryStream = new MemoryStream();
-                StreamWriter newWriter = new StreamWriter(newMemoryStream);
-
-                StringBuilder currentStone = new StringBuilder();
-
-                while (streamReader.Peek() >= 0)
+                using (FileStream inputStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read))
+                using (StreamReader reader = new StreamReader(inputStream))
+                using (FileStream outputStream = new FileStream(tempFile + ".tmp", FileMode.Create, FileAccess.Write))
+                using (StreamWriter writer = new StreamWriter(outputStream))
                 {
-                    char c = (char)streamReader.Read();
-                    if (c == ' ')
+
+                    StringBuilder currentStone = new StringBuilder();
+
+                    while (reader.Peek() >= 0)
                     {
-                        processStones(currentStone, newWriter);
-                        currentStone.Clear();
+                        char c = (char)reader.Read();
+                        if (c == ' ')
+                        {
+                            processStones(currentStone, writer);
+                            currentStone.Clear();
+                        }
+                        else
+                        {
+                            currentStone.Append(c);
+                        }
                     }
-                    else
+
+                    if (currentStone.Length > 0)
                     {
-                        currentStone.Append(c);
+                        processStones(currentStone, writer);
                     }
                 }
 
-                if (currentStone.Length > 0)
-                {
-                    processStones(currentStone, newWriter);
-                }
-                newWriter.Flush();
-                memoryStream.Dispose();
-                memoryStream = newMemoryStream;
+                File.Delete(tempFile);
+                File.Move(tempFile + ".tmp", tempFile);
                 start++;
             }
 
-            memoryStream.Position = 0;
-            StreamReader finalReader = new StreamReader(memoryStream);
-            var finalStones = finalReader.ReadToEnd();
+            var finalStones = File.ReadAllText(tempFile);
             finalStones = finalStones.Remove(finalStones.Length - 1, 1);
             var numberOfStones = finalStones.Split(" ").Length;
 
@@ -108,6 +108,79 @@ namespace AoC24
 
         }
 
+        //this is when I give up and look at reddit for help
+        public void solveWithHelpFromReddit()
+        {
+            int start = 0;
+            int stop = 75;
+            var mainStones = "112 1110 163902 0 7656027 83039 9 74";
+            Console.WriteLine(mainStones);
+            var stonesAsList = mainStones.Split(" ");
+            var stones = stonesAsList.ToDictionary(n => n, n => new BigInteger(1));
+
+            while (start < stop)
+            {
+                var newStones = new Dictionary<string, BigInteger>();
+                foreach (var kvp in stones)
+                {
+                    string stone = kvp.Key.Trim();
+                    if (stone.Equals("0"))
+                    {
+                        if (newStones.ContainsKey("1"))
+                        {
+                            newStones["1"] += kvp.Value;
+
+                        }
+                        else
+                        {
+                            newStones["1"] = kvp.Value;
+                        }
+                    }
+                    else if (stone.Length % 2 == 0)
+                    {
+                        var firstPart = BigInteger.Parse(stone.Substring(0, stone.Length / 2)).ToString();
+                        var secondPart = BigInteger.Parse(stone.Substring(stone.Length / 2)).ToString();
+                        if (newStones.ContainsKey(firstPart))
+                        {
+                            newStones[firstPart] += kvp.Value;
+                        }
+                        else
+                        {
+                            newStones[firstPart] = kvp.Value;
+
+                        }
+                        if (newStones.ContainsKey(secondPart))
+                        {
+                            newStones[secondPart] += kvp.Value;
+                        }
+                        else
+                        {
+                            newStones[secondPart] = kvp.Value;
+                        }
+
+
+                    }
+                    else
+                    {
+                        var k = (BigInteger.Parse(stone) * 2024).ToString();
+                        if (newStones.ContainsKey(k))
+                        {
+                            newStones[k] += kvp.Value;
+                        }
+                        else
+                        {
+                            newStones[k] = kvp.Value;
+                        }
+                    }
+                }
+                stones = new Dictionary<string, BigInteger>(newStones);
+                //Console.WriteLine($"After {start} blinks: {string.Join(" ", stones.Select(kvp => $"{kvp.Key}({kvp.Value})"))}");
+                start++;
+            }
+
+            BigInteger sum = stones.Values.Aggregate(BigInteger.Zero, (sum, value) => sum + value);
+            Console.WriteLine($"Number of stones: {sum}: should be 183620");
+        }
 
         private void processStones(StringBuilder stone, StreamWriter writer)
         {
