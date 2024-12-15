@@ -1,11 +1,13 @@
-﻿namespace AoC24
+﻿using System.Collections.Generic;
+
+namespace AoC24
 {
     internal class Two : ISolver
 
     {
         public void solve()
         {
-            string firstOrSecond = "first";
+            string firstOrSecond = "second";
             int safeReports = 0;
             var lines = File.ReadAllLines("project_inputs/input_two.txt").Where(arg => !string.IsNullOrWhiteSpace(arg));
 
@@ -38,21 +40,30 @@
                     var prevValue = reports[0];
                     for (int i = 0; i < reports.Count; i++)
                     {
-                        bool isDecreasing = reports.Zip(reports.Skip(1), (a, b) => a > b).All(x => x);
-                        bool isIncreasing = reports.Zip(reports.Skip(1), (a, b) => a < b).All(x => x);
-
-                        if (!isIncreasing || !isDecreasing)
-                            continue;
-                        bool isOk = reports.Zip(reports.Skip(1), (a, b) => Math.Abs(a - b)).All(diff => diff >= 1 && diff <= 3);
-                        if (isOk)
+                        var reportsCopy = new List<int>(reports);
+                        for (int j = 0; j < reports.Count; j++)
                         {
-                            safeReports++;
-                            continue;
+                            bool isDecreasing = reportsCopy.Zip(reportsCopy.Skip(1), (a, b) => a > b).All(x => x);
+                            bool isIncreasing = reportsCopy.Zip(reportsCopy.Skip(1), (a, b) => a < b).All(x => x);
+
+                            bool isOk = reportsCopy.Zip(reportsCopy.Skip(1), (a, b) => Math.Abs(a - b)).All(diff => diff >= 1 && diff <= 3);
+                            if (!isOk || !isIncreasing || !isDecreasing)
+                            {
+                                reportsCopy.Remove(j);
+                                continue;
+                            }
+                            else
+                            {
+                                break;
+                            }
                         }
 
-                    }
 
+
+                        safeReports++;
+                    }
                 }
+                Console.WriteLine("Number of safe reports: " + safeReports);
 
             }
 
